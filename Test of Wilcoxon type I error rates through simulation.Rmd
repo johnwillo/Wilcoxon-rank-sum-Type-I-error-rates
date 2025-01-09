@@ -123,7 +123,7 @@ ft1
 
 ```
 
-When sample sizes and variances are the same, the type I error rates from the Wilcoxon rank sum are close to the desired alpha of 0.05. When sample sizes are different but variances are equal, the same is true. When sample sizes are equal but variances are different, the type I error rates are still rather close to 0.05. But when both sample sizes and variances are different, the type I error rate from the Wilcoxon rank sum test deviates considerably from 0.05. When the variance of the larger sample is greater than the variance of the smaller sample (as in row 8 of the table), the type I error rate is too far below the target alpha. When the variance of the smaller sample is greater than the variance of the larger sample (e.g., row 9), the type I error rate is too high.
+When sample sizes and variances are the same, the type I error rates from the Wilcoxon rank sum are close to the desired alpha of 0.05. When sample sizes are different but variances are equal, the same is true. When sample sizes are equal but variances are different, the type I error rates are still rather close to 0.05. But when both sample sizes and variances are different, the type I error rate from the Wilcoxon rank sum test deviates considerably from 0.05. When the variance of the larger sample is greater than the variance of the smaller sample (as in row 7 of the table), the type I error rate is too far below the target alpha. When the variance of the smaller sample is greater than the variance of the larger sample (e.g., row 8), the type I error rate is too high.
 
 These problems with type I error rates when both sample size and variance are unequal are very similar to the problems with the equal variance t test (see separate report). With the t test these problems are solved by specifying an unequal variance t test. But there is no such option with the Wilcoxon rank sum test. One of the assumptions of the test is that variances (or spread) are equal between the two populations being compared. When that is not the case the Wilcoxon test is compromised, at least when sample sizes differ.
 
@@ -147,7 +147,7 @@ ggplot(data.frame(skew2), aes(x = skew2)) +
   geom_histogram(bins = 20, col = "black", fill = "lightgray") +
   ylab("Count") +
   xlab("Value") +
-  ggtitle("Skewed normal population of 10,000 values with mean = 0, \nstandard deviation = 1, and skewness parameter (xi) = 3")
+  ggtitle("Skewed normal population of 10,000 values with mean = 0, \nstandard deviation = 2, and skewness parameter (xi) = 3")
 
 ```
 
@@ -176,7 +176,7 @@ ft2
 
 ```
 
-With a right skewed distribution, the empirical type I error rates are close enough to the desired alpha of 0.05 when variances are the same, regardless of whether sample sizes are different. This is true at all sample sizes compared. When sample sizes are the same but variances differ, the type I error rates are too high. When both sample sizes and variances are different, the results depend both on sample size and whether the variance of the smaller or larger sample is greater. When the variance of the smaller sample is higher, the type I error rate is always too high, in some cases far too high. When the variance of the larger sample is higher, the type I error rate is acceptable for sample sizes of 10 and 20, respectively, but too high in every other case. Interestingly, except for the situation where variances are the same for each sample, the empirical type I error rates get worse with increasing sample size. 
+With a right skewed distribution, the empirical type I error rates are close enough to the desired alpha of 0.05 when variances are the same, regardless of whether sample sizes are different. This is true at all sample sizes compared. When sample sizes are the same but variances differ, the type I error rates are much too high. When both sample sizes and variances are different, the results depend both on sample size and whether the variance of the smaller or larger sample is greater. When the variance of the smaller sample is higher, the type I error rate is always too high, in some cases far too high. When the variance of the larger sample is higher, the type I error rate is acceptable for sample sizes of 10 and 20, respectively, but too high in every other case. Interestingly, except for the situation where variances are the same for each sample, the empirical type I error rates get worse with increasing sample size. 
 
 With right skewed normal distributions, the Wilcoxon rank sum test appears to give valid results only when the variances (and therefore the spread) of the two populations being compared are equal which perhaps should not be surprising given that this is one of the assumptions of the test. But this is a troublesome finding because one of the reasons for using the Wilcoxon rank sum test is that it doesn't assume the two populations are normally distributed. Here we have a skewed distribution which would argue for use of the Wilcoxon test over the t test, but when variances differ the Wilcoxon test is less reliable than an unequal variance t test (see separate report on t test type I error rates), even for populations with right-skewed distributions.
 
