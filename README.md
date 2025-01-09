@@ -1,1 +1,6 @@
-# Wilcoxon-rank-sum-Type-I-error-rates
+# Examination of type I error rates of Wilcoxon rank sum tests
+This paper examines, through simulations, how well the Wilcoxon rank sum test approximates the desired Type I error specified in the test. The results for equal and unequal sample sizes and equal and unequal variances are examined, both for normal and skewed distributions.
+
+The Wilcoxon rank sum test is also known as the Mann-Whitney test. It is a nonparametric analog to the independent-sample t test. The reason it's considered "nonparametric" is that, unlike the t test, there is no assumption that the populations being compared are normally distributed. But it does have the assumption that the two populations have equal variance or spread. This is a big assumption with ecological data in which the standard deviation often increases with the mean.
+
+Another issue with the Wilcoxon rank sum test is that it is sensitive to tied values, so it is most appropriate for data involving real numbers (i.e., numbers with decimals) because these numbers are much less likely to have tied values than integer (e.g., count) data (in fact, tied values only occur with real numbers because of measurement limitations). In contrast, count values commonly have tied values, especially because sampling units with zeros often occur. Here we test it only on real numbers created using a standard normal distribution and a right-skewed normal distribution.

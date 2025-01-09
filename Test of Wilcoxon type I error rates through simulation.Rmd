@@ -1,0 +1,183 @@
+---
+title: "Test of type I error rates for the Wilcoxon rank sum test through simulations"
+author: "John Willoughby"
+date: "`r Sys.Date()`"
+output: html_document
+bibliography: references.bib
+---
+
+## Wilcoxon rank sum test
+
+This paper examines, through simulations, how well the Wilcoxon rank sum test approximates the desired Type I error specified in the test. The results for equal and unequal sample sizes and equal and unequal variances are examined, both for normal and skewed distributions.
+
+The Wilcoxon rank sum test is also known as the Mann-Whitney test. It is a nonparametric analog to the independent-sample t test. The reason it's considered "nonparametric" is that, unlike the t test, there is no assumption that the populations being compared are normally distributed. But it does have the assumption that the two populations have equal variance or spread. This is a big assumption with ecological data in which the standard deviation often increases with the mean.
+
+Another issue with the Wilcoxon rank sum test is that it is sensitive to tied values, so it is most appropriate for data involving real numbers (i.e., numbers with decimals) because these numbers are much less likely to have tied values than integer (e.g., count) data (in fact, tied values only occur with real numbers because of measurement limitations). In contrast, count values commonly have tied values, especially because sampling units with zeros often occur. Here we test it only on real numbers created using a standard normal distribution and a right-skewed normal distribution.
+
+In each of the situations examined, both samples come from the same population, so any p values less than the specified alpha value represent Type I errors (often called false-change errors in a monitoring context).
+
+Bradley [-@bradleyRobustness1978] provided a quantified measure of robustness. His criterion for a "negligible" departure of the realized type I error rate from the desired alpha was that it should fall within the interval 0.9\*alpha to 1.1\*alpha, meaning that for a desired alpha of 0.05, the realized type I error rate should be inside the interval 0.045 to 0.055. For a desired alpha of 0.10, the realized type I error rate should be inside the interval 0.09 to 0.11. His "liberal" criterion for robustness specified that the realized Type 1 error rate should fall within the interval 0.5\*alpha to 1.5\*alpha. So if the specified alpha is 0.05, then the realized Type 1 error rate should be inside the interval 0.025 to 0.075. If the specified alpha is 0.10, then the realized Type I error rate should fall within the interval 0.05 to 0.15. We will look only at alpha = 0.05 here, but you can change the alpha level in the code below to examine what would happen with different alpha values.
+
+Load needed packages:
+
+```{r message = FALSE, warning = FALSE}
+library(tidyverse) # Loads ggplot, dplyr, and several other packages.
+library(ggthemes) # To use theme_few() in ggplot
+library(flextable) # To make tables
+library(fGarch) # To create skewed normal random values
+
+```
+
+Let's examine 22 different several sampling scenarios. We'll first use the standard normal distribution, which has a mean of 0 and a standard deviation of 1 and then alter the sample size and increase the standard deviation of one or both of the samples to 2. Later below we'll use a right-skewed normal distribution with a mean of 0 and standard deviations of 1 or 2.
+
+In each of these scenarios both samples have the same mean, so we're essentially assuming that the two samples come from a population with a mean of zero; thus we're examining the null distribution for a population with a mean of zero. This means that when we run a Wilcoxon rank sum test on these samples and set the desired alpha to 0.05, just by chance about 5% of the p values should fall below 0.05. These are type I errors.
+
+We'll set the number of simulations to 5000 for each comparison, but this can be changed in the code below.
+
+Note that I am not setting a random number seed for these simulations, so if you run the simulations you will get somewhat different results.
+
+The following combinations of n1 size, n2 size, and sample standard deviations (s1 and s2) are run (means are 0 in all cases):
+
+| n1  | n2  | s1  | s2  |
+|:---:|:---:|:---:|:---:|
+| 10  | 10  |  1  |  1  |
+| 10  | 10  |  1  |  2  |
+| 10  | 10  |  2  |  2  |
+| 10  | 20  |  1  |  1  |
+| 20  | 20  |  1  |  1  |
+| 20  | 20  |  1  |  2  |
+| 10  | 20  |  1  |  2  |
+| 20  | 10  |  1  |  2  |
+| 30  | 30  |  1  |  1  |
+| 30  | 30  |  1  |  2  |
+| 30  | 30  |  2  |  2  |
+| 30  | 50  |  1  |  1  |
+| 50  | 30  |  1  |  1  |
+| 30  | 50  |  1  |  2  |
+| 50  | 30  |  1  |  2  |
+| 50  | 50  |  1  |  1  |
+| 50  | 50  |  1  |  2  |
+| 100 | 100 |  1  |  1  |
+| 100 | 100 |  1  |  2  |
+| 100 | 50  |  1  |  1  |
+| 100 | 50  |  1  |  2  |
+| 50  | 100 |  1  |  2  |
+
+Set the number of simulations to run.
+
+```{r}
+nreps = 5000
+```
+
+Set the alpha level
+
+```{r}
+alpha.p = 0.05
+```
+
+### Wilcoxon rank sum tests on samples from normal populations
+
+Create a data frame with combinations of sample sizes and standard deviations for the two samples, n1 and n2. Standard deviations for each sample are specified in columns s1 and s2. Add column p.Wilcoxon and fill with NA. The mean type I error values for this column will be filled in by the for loop below.
+
+```{r}
+combos = data.frame(n1 = c(10, 10, 10, 10, 20, 20, 10, 20, 30,
+                           30,	30,	30,	50,	30,	50,	50,	50,	100,
+                           100, 100, 100,	50),
+                    n2 = c(10, 10, 10, 20, 20, 20, 20, 10, 30,
+                           30,	30,	50,	30,	50,	30,	50,	50,	100,
+                           100,	50,	50,	100),
+                    s1 = c(1, 1, 2, 1, 1, 1, 1, 1, 1, 1,	2, 1,
+                           1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+                    s2 = c(1, 2, 2, 1, 1, 2, 2, 2,	1, 2, 2, 1,
+                           1, 2, 2, 1, 2, 1, 2, 1,	2, 2),
+                    p.Wilcoxon = rep(NA, 22))
+
+combos2 = combos  # Create a second combos df for later analysis on skewed data.              
+```
+
+The for loop below takes the sample sizes and standard deviations in each row of the combos data frame created above, draws two random samples from the same populations, performs a Wilcoxon rank sum test on each pair of samples and records the p value for the test. It does this the number of times specified in nreps above, and returns the mean proportion of times the p values fell below the alpha level specified (0.05 as entered above). This is the empirical type I error rate for each of the 22 sampling scenarios.
+
+```{r}
+for(i in 1:nrow(combos)) {
+
+type.1.error = mean(replicate(nreps,
+    wilcox.test(rnorm(combos$n1[i], mean = 0, sd = combos$s1[i]),
+       rnorm(combos$n2[i], mean = 0, sd = combos$s2[i]),
+       alternative = "two.sided")$p.value) < 0.05)
+
+combos[i, 5] = type.1.error
+  
+}
+
+```
+
+Put the results in a table.
+
+```{r}
+ft1 = flextable(combos)
+
+ft1 = set_caption(ft1,
+                 caption = paste0("Empirical type I error rates from ", nreps, " simulations of Wilcoxon rank sum tests on samples from a normal population with a mean of 0 and equal or unequal standard deviations. The target alpha value is ", alpha.p,"." )) |> 
+  set_header_labels(ft1, p.Wilcoxon = "Type I error rate")
+ft1                                  
+
+```
+
+When sample sizes and variances are the same, the type I error rates from the Wilcoxon rank sum are close to the desired alpha of 0.05. When sample sizes are different but variances are equal, the same is true. When sample sizes are equal but variances are different, the type I error rates are still rather close to 0.05. But when both sample sizes and variances are different, the type I error rate from the Wilcoxon rank sum test deviates considerably from 0.05. When the variance of the larger sample is greater than the variance of the smaller sample (as in row 8 of the table), the type I error rate is too far below the target alpha. When the variance of the smaller sample is greater than the variance of the larger sample (e.g., row 9), the type I error rate is too high.
+
+These problems with type I error rates when both sample size and variance are unequal are very similar to the problems with the equal variance t test (see separate report). With the t test these problems are solved by specifying an unequal variance t test. But there is no such option with the Wilcoxon rank sum test. One of the assumptions of the test is that variances (or spread) are equal between the two populations being compared. When that is not the case the Wilcoxon test is compromised, at least when sample sizes differ.
+
+### Wilcoxon rank sum tests on samples from right-skewed normal population
+
+Now we'll do the same analysis except the samples come from a right-skewed normal population. The mean is still zero and the standard deviation is either 1 or 2. But now there's a skewness parameter (xi) that skews the population to the right. Here are examples of populations with this skew, one with a standard deviation of 1 and the other with a standard deviation of 2.
+
+```{r fig.height = 5, fig.width = 8}
+skew1 = rsnorm(10000, mean = 0, sd = 1, xi = 3)
+skew2 = rsnorm(10000, mean = 0, sd = 2, xi = 3)
+
+ggplot(data.frame(skew1), aes(x = skew1)) +
+  theme_few(base_size = 13) +
+  geom_histogram(bins = 20, col = "black", fill = "lightgray") +
+  ylab("Count") +
+  xlab("Value") +
+  ggtitle("Skewed normal population of 10,000 values with mean = 0, \nstandard deviation = 1, and skewness parameter (xi) = 3")
+
+ggplot(data.frame(skew2), aes(x = skew2)) +
+  theme_few(base_size = 13) +
+  geom_histogram(bins = 20, col = "black", fill = "lightgray") +
+  ylab("Count") +
+  xlab("Value") +
+  ggtitle("Skewed normal population of 10,000 values with mean = 0, \nstandard deviation = 1, and skewness parameter (xi) = 3")
+
+```
+
+```{r}
+for(i in 1:nrow(combos2)) {
+
+type.1.error = mean(replicate(nreps,
+  wilcox.test(rsnorm(combos2$n1[i], mean = 0, sd = combos2$s1[i],
+    xi = 3), rsnorm(combos2$n2[i], mean = 0, sd = combos2$s2[i],
+    xi = 3), alternative = "two.sided")$p.value) < 0.05)
+
+combos2[i, 5] = type.1.error
+}
+```
+
+Put the results in a table.
+
+```{r}
+
+ft2 = flextable(combos2)
+
+ft2 = set_caption(ft2,
+                 caption = paste0("Empirical type I error rates from ", nreps, " simulations of Wilcoxon rank sum tests on samples from a right-skewed normal population with a mean of 0 and equal or unequal standard deviations with various equal or unequal sample sizes. The target alpha value is ", alpha.p,". ")) |> 
+  set_header_labels(ft1, p.Wilcoxon = "Type I error rate")
+ft2                                  
+
+```
+
+With a right skewed distribution, the empirical type I error rates are close enough to the desired alpha of 0.05 when variances are the same, regardless of whether sample sizes are different. This is true at all sample sizes compared. When sample sizes are the same but variances differ, the type I error rates are too high. When both sample sizes and variances are different, the results depend both on sample size and whether the variance of the smaller or larger sample is greater. When the variance of the smaller sample is higher, the type I error rate is always too high, in some cases far too high. When the variance of the larger sample is higher, the type I error rate is acceptable for sample sizes of 10 and 20, respectively, but too high in every other case. Interestingly, except for the situation where variances are the same for each sample, the empirical type I error rates get worse with increasing sample size. 
+
+With right skewed normal distributions, the Wilcoxon rank sum test appears to give valid results only when the variances (and therefore the spread) of the two populations being compared are equal which perhaps should not be surprising given that this is one of the assumptions of the test. But this is a troublesome finding because one of the reasons for using the Wilcoxon rank sum test is that it doesn't assume the two populations are normally distributed. Here we have a skewed distribution which would argue for use of the Wilcoxon test over the t test, but when variances differ the Wilcoxon test is less reliable than an unequal variance t test (see separate report on t test type I error rates), even for populations with right-skewed distributions.
+
+### Literature Cited
